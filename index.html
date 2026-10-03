@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluasi Instruktur - Practical Office Advance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .rating-input:checked + .rating-label-1 { background-color: #ef4444; border-color: #ef4444; color: white;}
+        .rating-input:checked + .rating-label-2 { background-color: #f97316; border-color: #f97316; color: white;}
+        .rating-input:checked + .rating-label-3 { background-color: #eab308; border-color: #eab308; color: white;}
+        .rating-input:checked + .rating-label-4 { background-color: #22c55e; border-color: #22c55e; color: white;}
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen py-10 px-4 flex justify-center">
+
+<div class="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+    <div class="bg-blue-700 p-8 text-white text-center">
+        <h1 class="text-3xl font-bold">Evaluasi Instruktur</h1>
+        <p class="mt-2 text-blue-100">Pelatihan Practical Office Advance</p>
+    </div>
+
+    <form id="evalForm" class="p-6 md:p-8 space-y-6">
+        <!-- Input Nama -->
+        <div class="mb-8">
+            <label class="block text-sm font-semibold mb-2">Nama Peserta</label>
+            <input type="text" id="nama" name="nama" required placeholder="Masukkan nama Anda" 
+                   class="w-full md:w-1/2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none transition">
+        </div>
+
+        <p class="text-sm text-gray-500 mb-4 border-l-4 border-blue-500 pl-3">
+            Beri nilai dari 1 (Paling Jelek) hingga 4 (Paling Bagus) untuk setiap aspek di bawah ini.
+        </p>
+
+        <!-- Wadah 10 Pertanyaan dengan Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="questionContainer">
+            <!-- Pertanyaan akan di-generate oleh JS agar kode HTML lebih pendek dan rapi -->
+        </div>
+
+        <!-- Saran -->
+        <div class="mt-8">
+            <label class="block text-sm font-semibold mb-2">Kritik & Saran untuk Instruktur</label>
+            <textarea id="saran" name="saran" rows="3" placeholder="Tuliskan masukan berharga Anda..." 
+                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none transition"></textarea>
+        </div>
+
+        <!-- Real-time Preview Result -->
+        <div class="bg-blue-50 border border-blue-100 rounded-lg p-6 text-center mt-6">
+            <p class="text-sm text-blue-800 font-medium">Predikat Evaluasi Otomatis (Rata-rata: <span id="skorRataRata">0.00</span>)</p>
+            <h3 id="hasilPredikat" class="text-3xl font-bold text-slate-800 mt-2">-</h3>
+        </div>
+
+        <button type="submit" id="btnSubmit" 
+                class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-4 rounded-lg transition shadow-md mt-6">
+            Kirim Evaluasi
+        </button>
+    </form>
+</div>
+
+<script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbw2wyOptMk7fng7_5RCsVS_MGWzKh22_aobTMYYcxGGIVs9t3apYXtQ4lcB9AZ2QViR/exec'; 
+    const form = document.getElementById('evalForm');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const hasilPredikat = document.getElementById('hasilPredikat');
+    const skorRataRata = document.getElementById('skorRataRata');
+
+    // Daftar 10 Pertanyaan
+    const questions = [
+        "Bagaimana penguasaan instruktur terhadap keseluruhan materi?",
+        "Seberapa jelas instruktur dalam menyampaikan materi pelatihan?",
+        "Seberapa baik instruktur dalam memberikan contoh kasus/praktik aplikasi?",
+        "Bagaimana tingkat kesabaran instruktur saat membimbing peserta praktik?",
+        "Seberapa responsif dan tepat instruktur dalam menjawab pertanyaan?",
+        "Bagaimana kemampuan instruktur menghidupkan suasana agar kelas tidak membosankan?",
+        "Bagaimana efektivitas penggunaan media atau alat bantu presentasi?",
+        "Seberapa baik instruktur dalam mengelola dan memanfaatkan waktu pelatihan?",
+        "Apakah urutan atau sistematika penyampaian materi mudah diikuti?",
+        "Seberapa besar peningkatan keahlian (manfaat) yang Anda rasakan setelah sesi ini?"
+    ];
+
+    const questionContainer = document.getElementById('questionContainer');
+
+    // Render HTML untuk 10 Pertanyaan secara dinamis
+    questions.forEach((q, index) => {
+        const i = index + 1;
+        const html = `
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <label class="block text-sm font-semibold mb-3">Q${i}. ${q}</label>
+            <div class="flex gap-2">
+                <input type="radio" id="q${i}_1" name="q${i}" value="1" class="hidden rating-input" required>
+                <label for="q${i}_1" class="rating-label-1 flex-1 py-2 border rounded-lg text-center cursor-pointer font-medium text-gray-600 transition hover:bg-white">1</label>
+                
+                <input type="radio" id="q${i}_2" name="q${i}" value="2" class="hidden rating-input">
+                <label for="q${i}_2" class="rating-label-2 flex-1 py-2 border rounded-lg text-center cursor-pointer font-medium text-gray-600 transition hover:bg-white">2</label>
+                
+                <input type="radio" id="q${i}_3" name="q${i}" value="3" class="hidden rating-input">
+                <label for="q${i}_3" class="rating-label-3 flex-1 py-2 border rounded-lg text-center cursor-pointer font-medium text-gray-600 transition hover:bg-white">3</label>
+                
+                <input type="radio" id="q${i}_4" name="q${i}" value="4" class="hidden rating-input">
+                <label for="q${i}_4" class="rating-label-4 flex-1 py-2 border rounded-lg text-center cursor-pointer font-medium text-gray-600 transition hover:bg-white">4</label>
+            </div>
+        </div>`;
+        questionContainer.innerHTML += html;
+    });
+
+    // Menghitung Konversi Real-time
+    form.addEventListener('change', hitungHasil);
+
+    function hitungHasil() {
+        let total = 0;
+        let dijawab = 0;
+
+        for(let i = 1; i <= 10; i++) {
+            const val = document.querySelector(`input[name="q${i}"]:checked`)?.value;
+            if(val) {
+                total += parseInt(val);
+                dijawab++;
+            }
+        }
+
+        if (dijawab === 10) {
+            const rataRata = total / 10;
+            let predikat = "";
+
+            if (rataRata >= 1.0 && rataRata <= 1.75) predikat = "Sangat Jelek";
+            else if (rataRata > 1.75 && rataRata <= 2.50) predikat = "Jelek";
+            else if (rataRata > 2.50 && rataRata <= 3.25) predikat = "Baik";
+            else if (rataRata > 3.25 && rataRata <= 4.0) predikat = "Sangat Baik";
+
+            skorRataRata.innerText = rataRata.toFixed(2);
+            hasilPredikat.innerText = predikat;
+            
+            if (predikat.includes("Baik")) {
+                hasilPredikat.className = "text-3xl font-bold mt-2 text-green-600";
+            } else {
+                hasilPredikat.className = "text-3xl font-bold mt-2 text-red-600";
+            }
+                
+            return { rataRata: rataRata.toFixed(2), predikat };
+        }
+        return null;
+    }
+
+    form.addEventListener('submit', e => {
+        e.preventDefault();
+        const hasil = hitungHasil();
+        
+        btnSubmit.innerHTML = 'Mengirim Data...';
+        btnSubmit.disabled = true;
+
+        const formData = new FormData(form);
+        formData.append('rata_rata', hasil.rataRata);
+        formData.append('hasil', hasil.predikat);
+
+        fetch(scriptURL, { method: 'POST', body: formData })
+            .then(response => {
+                Swal.fire({
+                    title: 'Berhasil!',
+                    text: 'Terima kasih atas penilaian Anda terhadap instruktur.',
+                    icon: 'success',
+                    confirmButtonColor: '#1d4ed8'
+                });
+                form.reset();
+                hasilPredikat.innerText = "-";
+                skorRataRata.innerText = "0.00";
+                hasilPredikat.className = "text-3xl font-bold text-slate-800 mt-2";
+                btnSubmit.innerHTML = 'Kirim Evaluasi';
+                btnSubmit.disabled = false;
+            })
+            .catch(error => {
+                Swal.fire('Error!', 'Gagal mengirim evaluasi, periksa koneksi Anda.', 'error');
+                btnSubmit.innerHTML = 'Kirim Evaluasi';
+                btnSubmit.disabled = false;
+            });
+    });
+</script>
+</body>
+</html>
